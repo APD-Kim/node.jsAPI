@@ -17,7 +17,11 @@ router
   .route('/products')
   .post(async (req, res) => {
     try {
-      let product = req.body; //컨트롤러
+      const product = req.body;
+      const { creator, name, content, password } = req.body;
+      if (name === '' || content === '' || creator === '' || password === '') {
+        res.status(400).json({ message: '요청이 잘못 되었습니다.' });
+      }
       const salt = await bcrypt.genSalt(10);
       const hashed = await bcrypt.hash(product.password, salt);
       let newProduct = new production({
@@ -27,9 +31,9 @@ router
         password: hashed, //비밀번호
       }); //서비스(로직)
       await newProduct.save(); //db i/o
-      res.status(200).send('상품을 성공적으로 등록하였습니다.'); //컨트롤러
+      res.status(200).json({ message: '상품을 성공적으로 등록하였습니다.' }); //컨트롤러
     } catch {
-      res.status(500).send('서버 에러 발생'); //컨트롤러
+      res.status(500).json({ message: '서버 에러 발생' }); //컨트롤러
     }
   })
   //bcrypt, 오류처리,
@@ -38,11 +42,11 @@ router
     try {
       let result = await production.find().sort({ date: -1 });
       if (!result) {
-        return res.status(404).send('상품 조회에 실패하였습니다.');
+        return res.status(404).json({ message: '상품 조회에 실패하였습니다.' });
       }
       res.json(result);
     } catch {
-      res.status(500).send('서버 에러 발생');
+      res.status(500).json({ message: '서버 에러 발생' });
     }
   });
 //상품 상세 조회
@@ -51,9 +55,9 @@ router
   .get(async (req, res) => {
     try {
       let result = await production.findOne({ _id: new ObjectId(req.params.id) });
-
+      console.log(result);
       if (!result) {
-        return res.status(404).send('상품 조회에 실패하였습니다.');
+        return res.status(404).json({ message: '상품 조회에 실패하였습니다.' });
       } else {
         let { name, content, creator, date, isSale } = result;
         res.json({
@@ -65,15 +69,16 @@ router
         });
       }
     } catch {
-      return res.status(500).send('서버 에러 발생');
+      return res.status(500).json({ message: '서버 에러 발생' });
     }
   })
   //상품 정보 수정
   .put(async (req, res) => {
     try {
       let result = await production.findOne({ _id: new ObjectId(req.params.id) });
+      console.log(result);
       if (!result) {
-        return res.status(404).send('상품 조회에 실패하였습니다.');
+        return res.status(404).json({ message: '상품 조회에 실패하였습니다.' });
       }
       const validPassword = await bcrypt.compare(req.body.password, result.password);
       if (validPassword) {
@@ -87,12 +92,12 @@ router
             },
           }
         );
-        return res.status(200).send('상품이 성공적으로 수정되었습니다.');
+        return res.status(200).json({ message: '상품이 성공적으로 수정되었습니다.' });
       } else {
-        return res.status(401).send('비밀번호가 맞지 않습니다');
+        return res.status(401).json({ message: '비밀번호가 맞지 않습니다' });
       }
     } catch (e) {
-      res.status(500).send('서버 에러 발생');
+      res.status(500).json({ message: '서버 에러 발생' });
     }
   })
 
@@ -101,19 +106,19 @@ router
       let result = await production.findOne({ _id: new ObjectId(req.params.id) });
       console.log(result);
       if (result.length === 0) {
-        return res.status(404).send('상품 조회에 실패하였습니다.');
+        return res.status(404).json({ message: '상품 조회에 실패하였습니다.' });
       }
       const validPassword = await bcrypt.compare(req.body.password, result.password);
       if (validPassword) {
         await production.deleteOne({
           _id: new ObjectId(req.params.id),
         });
-        return res.status(200).send('성공적으로 상품이 삭제되었습니다.');
+        return res.status(200).json({ message: '성공적으로 상품이 삭제되었습니다.' });
       } else {
-        return res.status(401).send('비밀번호가 맞지 않습니다');
+        return res.status(401).json({ message: '비밀번호가 맞지 않습니다' });
       }
     } catch (e) {
-      return res.status(500).send('서버 에러 발생');
+      return res.status(500).json({ message: '서버 에러 발생' });
     }
   });
 //검색기능
@@ -122,7 +127,7 @@ router.post('/products/search', async (req, res) => {
     const { name } = req.query;
     let result = await production.find({ name: new RegExp(name, 'i') });
     if (result.length === 0) {
-      return res.status(404).send('검색 결과가 없습니다.');
+      return res.status(404).json({ message: '검색 결과가 없습니다.' });
     } else {
       res.json(result);
     }
